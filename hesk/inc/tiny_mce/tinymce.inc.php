@@ -17,6 +17,7 @@ if (!defined('IN_SCRIPT')) {die('Invalid attempt');}
 
 function hesk_tinymce_init($selector='#message')
 {
+    global $hesklang;
     ?>
     <script>
         tinymce.init({
@@ -24,6 +25,26 @@ function hesk_tinymce_init($selector='#message')
             convert_urls: false,
             branding: false,
             browser_spellcheck: true,
+            contextmenu: 'link useBrowserSpellcheck image table',
+            setup: function (editor) {
+                editor.ui.registry.addMenuItem('useBrowserSpellcheck', {
+                text: '<?php echo hesk_slashJS($hesklang['tmce1']); ?>',
+                onAction: function () {
+                  editor.notificationManager.open({
+                    text: '<?php echo hesk_slashJS($hesklang['tmce2']); ?>',
+                    type: 'info',
+                    timeout: 5000,
+                    closeButton: true
+                  });
+                }
+              });
+
+              editor.ui.registry.addContextMenu('useBrowserSpellcheck', {
+                update: function (node) {
+                  return editor.selection.isCollapsed() ? ['useBrowserSpellcheck'] : [];
+                }
+              });
+            },
             toolbar: 'undo redo | styleselect fontselect fontsizeselect | bold italic underline | alignleft aligncenter alignright alignjustify | forecolor backcolor | bullist numlist outdent indent | link unlink image codesample code',
             plugins: 'charmap code codesample image link lists table autolink',
             height: 350,

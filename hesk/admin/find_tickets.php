@@ -228,31 +228,25 @@ else
 }
 
 /* Date */
-/* -> Check for compatibility with old date format */
-if (preg_match("/(\d{4})-(\d{2})-(\d{2})/", hesk_GET('dt'), $m))
-{
-	$_GET['dt']=$m[2].$m[3].$m[1];
-}
+$date_input = hesk_GET('dt');
+$formatted_search_date = hesk_datepicker_get_date($date_input);
 
-/* -> Now process the date value */
-$dt = preg_replace('/[^0-9]/','', hesk_GET('dt') );
-if (strlen($dt) == 8)
-{
-	$date = substr($dt,4,4) . '-' . substr($dt,0,2) . '-' . substr($dt,2,2);
-	$date_input= substr($dt,0,2) . '/' . substr($dt,2,2) . '/' . substr($dt,4,4);
+if ($formatted_search_date !== false) {
+    $hesk_settings['datepicker'] = array();
+    $hesk_settings['datepicker']['#find-date']['timestamp'] = $formatted_search_date->getTimestamp();;
 
-	/* This search is valid even if no query is entered */
-	if ($no_query)
-	{
-		$hesk_error_buffer = str_replace($hesklang['fsq'],'',$hesk_error_buffer);
-	}
+    $formatted_search_date = $formatted_search_date->format('Y-m-d');
 
-	$sql .= " AND `dt` BETWEEN '{$date} 00:00:00' AND '{$date} 23:59:59' ";
-    $sql_count .= " AND `dt` BETWEEN '{$date} 00:00:00' AND '{$date} 23:59:59' ";
-}
-else
-{
-	$date = '';
+    // This search is valid even if no query is entered
+    if ($no_query) {
+        $hesk_error_buffer = str_replace($hesklang['fsq'],'',$hesk_error_buffer);
+    }
+
+	$sql .= " AND `dt` BETWEEN '{$formatted_search_date} 00:00:00' AND '{$formatted_search_date} 23:59:59' ";
+    $sql_count .= " AND `dt` BETWEEN '{$formatted_search_date} 00:00:00' AND '{$formatted_search_date} 23:59:59' ";
+
+} else {
+    $formatted_search_date = '';
     $date_input = '';
 }
 

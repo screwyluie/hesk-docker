@@ -124,13 +124,28 @@ $pop3->tls		= $hesk_settings['pop3_tls'];
 $pop3->debug	= 0;
 $pop3->join_continuation_header_lines = 1;
 
+if ($hesk_settings['pop3_conn_type']=='oauth') {
+    require(HESK_PATH . 'inc/oauth_functions.inc.php');
+    $pop3->authentication_mechanism = 'XOAUTH2';
+    hesk_dbConnect();
+    $access_token = hesk_fetch_access_token($hesk_settings['pop3_oauth_provider']);
+    if (!$access_token) {
+        echo "<pre>" . $hesklang['error'] . ': ' . $hesklang['oauth_error_retrieve'] . "</pre>";
+        if ($hesk_settings['pop3_job_wait'])
+        {
+            unlink($job_file);
+        }
+        return null;
+    }
+}
+
 // Connect to POP3
 if(($error=$pop3->Open())=="")
 {
 	echo $hesk_settings['debug_mode'] ? "<pre>Connected to the POP3 server &quot;" . $pop3->hostname . "&quot;.</pre>\n" : '';
 
 	// Authenticate
-	if(($error=$pop3->Login($hesk_settings['pop3_user'], hesk_htmlspecialchars_decode($hesk_settings['pop3_password'])))=="")
+	if(($error=$pop3->Login($hesk_settings['pop3_user'], ($hesk_settings['pop3_conn_type']=='oauth' ? $access_token : hesk_htmlspecialchars_decode(stripslashes($hesk_settings['pop3_password'])))))=="")
 	{
 		echo $hesk_settings['debug_mode'] ? "<pre>User &quot;" . $hesk_settings['pop3_user'] . "&quot; logged in.</pre>\n" : '';
 
@@ -138,6 +153,17 @@ if(($error=$pop3->Open())=="")
 		if(($error=$pop3->Statistics($messages,$size))=="")
 		{
 			echo $hesk_settings['debug_mode'] ? "<pre>There are $messages messages in the mail box with a total of $size bytes.</pre>\n" : '';
+
+            if (hesk_GET('test_mode') == 1)
+            {
+                $pop3->Close();
+                echo $hesk_settings['debug_mode'] ? "<pre>TEST MODE, NO EMAILS PROCESSED\n\nDisconnected from the POP3 server &quot;" . $pop3->hostname . "&quot;.</pre>\n" : '';
+                if ($hesk_settings['pop3_job_wait'])
+                {
+                    unlink($job_file);
+                }
+                return null;
+            }
 
 			// If we have any messages, process them
 			if($messages>0)
@@ -159,12 +185,11 @@ if(($error=$pop3->Open())=="")
 					if ( $id = hesk_email2ticket($results, 1, $set_category, $set_priority) )
 					{
 						echo $hesk_settings['debug_mode'] ? "<pre>Ticket $id created/updated.</pre>\n" : '';
-
 					}
-					else
-					{
-						echo $hesk_settings['debug_mode'] ? "<pre>Ticket NOT inserted - may be duplicate, blocked or an error.</pre>\n" : '';
-					}
+                    elseif (isset($hesk_settings['DEBUG_LOG']['PIPE']))
+                    {
+                        echo "<pre>Ticket NOT inserted: " . $hesk_settings['DEBUG_LOG']['PIPE'] . "</pre>\n";
+                    }
 
 					// Queue message to be deleted on connection close
 					if ( ! $hesk_settings['pop3_keep'])

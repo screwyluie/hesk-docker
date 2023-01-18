@@ -89,6 +89,9 @@ function hesk3_output_custom_fields($customFields) {
             <?php
                 break;
             case 'date':
+                if (is_string($customField['original_value']) && ($dd = hesk_datepicker_get_date($customField['original_value']))) {
+                    $hesk_settings['datepicker']['#'.$customField['name']]['timestamp'] = $dd->getTimestamp();
+                }
                 ?>
                 <!--[if !IE]><!-->
                 <section class="param calendar">
@@ -100,12 +103,13 @@ function hesk3_output_custom_fields($customFields) {
                             </svg>
                         </button>
                         <input name="<?php echo $customField['name']; ?>"
+                               id="<?php echo $customField['name']; ?>"
                                value="<?php echo $customField['original_value']; ?>"
                                type="text"
                                class="datepicker">
                     </div>
                     <div class="calendar--value" <?php if ($customField['original_value']) { ?>style="display: block"<?php } ?>>
-                        <span><?php echo $customField['original_value']; ?></span>
+                        <span <?php if ($customField['iserror']) echo 'class="isErrorStr"'; ?>><?php echo $customField['original_value']; ?></span>
                         <i class="close">
                             <svg class="icon icon-close">
                                 <use xlink:href="<?php echo TEMPLATE_PATH; ?>customer/img/sprite.svg#icon-close"></use>
